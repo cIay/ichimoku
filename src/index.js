@@ -8,11 +8,11 @@ import { ChartCanvas, Chart } from "react-stockcharts";
 import { CandlestickSeries, LineSeries, AreaOnlySeries} from "react-stockcharts/lib/series";
 import { XAxis, YAxis } from "react-stockcharts/lib/axes";
 import { fitWidth } from "react-stockcharts/lib/helper";
-import { HoverTooltip } from "react-stockcharts/lib/tooltip";
+//import { HoverTooltip } from "react-stockcharts/lib/tooltip";
 import { CrossHairCursor, MouseCoordinateX, MouseCoordinateY, PriceCoordinate } from "react-stockcharts/lib/coordinates";
 
 import './index.css';
-import { rawData } from "./rawdata"
+//import { rawData } from "./rawdata"
 
 
 function SelectionBar(props) {
@@ -46,7 +46,7 @@ function SelectionBar(props) {
   );
 }
 
-class MemeLines extends React.Component {
+class Ichimoku extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -76,16 +76,16 @@ class MemeLines extends React.Component {
 
   componentDidMount() {
     window.scrollBy({top: 999, left: 0, behavior: "smooth"});
-    this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
-    //this.fetchData();  
+    //this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
+    this.fetchData();  
   }
 
   componentDidUpdate(prevProps, prevState) {
     if ((prevState.cx !== this.state.cx) || 
         (prevState.sym !== this.state.sym) || 
         (prevState.price !== this.state.price)) {
-      console.log(`cx: ${this.state.cx} sym: ${this.state.sym} price: ${this.state.price}`);
-      //this.fetchData();
+      //console.log(`cx: ${this.state.cx} sym: ${this.state.sym} price: ${this.state.price}`);
+      this.fetchData();
     }
   }
 
@@ -171,7 +171,7 @@ class MemeLines extends React.Component {
   renderChart() {
     if (this.state.status === "loaded") {
       let p = this.state.hist[this.state.T].close;
-      console.log("rendering chart...");
+      //console.log("rendering chart...");
       return(
         <ChartCanvas 
           height={400}
@@ -207,7 +207,7 @@ class MemeLines extends React.Component {
       );
     }
     else {
-      console.log("rendering loader...");
+      //console.log("rendering loader...");
       return(
         <div style={{height: 400}}>
           <div className="loader" />
@@ -227,27 +227,22 @@ class MemeLines extends React.Component {
 
 }
 
-//        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
 class App extends React.Component {
   constructor(props) {
     super(props);
-    //let init = [];
-    //init.push(<MemeLines key={0}/>);
     this.state = {
       numCharts: 1
     };
   }
 
   handleClick() {
-    //let newState = this.state.charts;
-    //newState.push(<MemeLines key={newState.length}/>);
     this.setState({numCharts: this.state.numCharts+1});
   }
 
   render() {
     let charts = [];
     for (let i = 0; i < this.state.numCharts; i++) {
-      charts.push(<MemeLines key={i}/>);
+      charts.push(<Ichimoku key={i}/>);
     }
     return (
       <div className="app">
@@ -258,7 +253,7 @@ class App extends React.Component {
   }
 }
 
-MemeLines = fitWidth(MemeLines);
+Ichimoku = fitWidth(Ichimoku);
 
 ReactDOM.render(
   <App />,
