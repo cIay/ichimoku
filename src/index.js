@@ -12,38 +12,67 @@ import { fitWidth } from "react-stockcharts/lib/helper";
 import { CrossHairCursor, MouseCoordinateX, MouseCoordinateY, PriceCoordinate } from "react-stockcharts/lib/coordinates";
 
 import './index.css';
-//import { rawData } from "./rawdata"
 
+import { rawData } from "./rawdata"
 
-function SelectionBar(props) {
-  const settings = {Exchange: ["quadrigacx", "kraken", "bittrex"],
-                    Symbol: ["BTC", "ETH", "XMR"],
-                    Price: ["BTC", "ETH", "XMR", "USD", "CAD"]
-                   };
-  let codeMap = {Exchange: "cx", Symbol: "sym", Price: "price"};
-  let dropdown = [];
-  for (let name in settings) {
-    let items = [];
-    for (let i = 0; i < settings[name].length; i++) {
-      items.push(<span key={settings[name][i]} onClick={() => props.onClick(codeMap[name], settings[name][i])}>
-                   {settings[name][i]}
-                 </span>);
-    }
-    dropdown.push(<span key={name}>
-                    <div className="dropdown-name">
-                      {props.curState[codeMap[name]]}
-                    </div>
-                    <div className="dropdown-items">
-                      {items}
-                    </div>
-                  </span>
-                 );
+class SelectionBar extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      sym: this.props.curState["sym"],
+      price: this.props.curState["price"],
+      n: this.props.curState["n"]
+    };
   }
-  return(
-    <div className="settings">
-      {dropdown}
-    </div>
-  );
+
+  handleChange(key, event) {
+    let newState = {};
+    newState[key] = event.target.value;
+    this.setState(newState);
+  }
+
+  render() {
+    const dropdownSettings = {
+      cx: ["quadrigacx", "kraken", "bittrex"],
+      T: ["histoday", "histohour"]
+    };
+    let dropdown = [];
+    for (let key in dropdownSettings) {
+      let items = [];
+      for (let i = 0; i < dropdownSettings[key].length; i++) {
+        items.push(<span key={dropdownSettings[key][i]} onClick={() => this.props.onClick(key, dropdownSettings[key][i])}>
+                     {dropdownSettings[key][i]}
+                   </span>);
+      }
+      dropdown.push(<span key={key}>
+                      <div className="dropdown-selection">
+                        {this.props.curState[key]}
+                      </div>
+                      <div className="dropdown-items">
+                        {items}
+                      </div>
+                    </span>
+                   );
+    }
+
+    let textbox = [];
+    for (let key in this.state) {
+      textbox.push(
+        <span key={key}>
+          <form onSubmit={(e) => this.props.onSubmit(key, this.state[key], e)}>
+            <input type="text" size="10" value={this.state[key]} onChange={(e) => this.handleChange(key, e)}/>
+          </form>
+        </span>
+      );
+    }
+
+    return(
+      <div className="settings">
+        {dropdown}
+        {textbox}
+      </div>
+    );
+  }
 }
 
 class Ichimoku extends React.Component {
@@ -52,7 +81,8 @@ class Ichimoku extends React.Component {
     this.state = {
       status: "loading",
       hist: null,
-      T: 180,
+      T: "histoday",
+      n: 180,
       cx: "kraken",
       sym: "BTC",
       price: "USD"
@@ -61,41 +91,51 @@ class Ichimoku extends React.Component {
   
   fetchData() {
     const self = this;
-    let url = `https://min-api.cryptocompare.com/data/histoday?fsym=${this.state.sym}&tsym=${this.state.price}&limit=${this.state.T}&aggregate=1&e=${this.state.cx}`;
+    let url = `https://min-api.cryptocompare.com/data/${this.state.T}?fsym=${this.state.sym}&tsym=${this.state.price}&limit=${this.state.n}&aggregate=1&e=${this.state.cx}`;
     fetch(url).then(function(response) {
       return response.json();
-    }).then(function(histoday) {
-      if (histoday.Response === "Success") {
-        self.setState({status: "loaded", hist: self.createIchimoku(histoday.Data)});
+    }).then(function(jsonData) {
+      if (jsonData.Response === "Success") {
+        self.setState({status: "loaded", hist: self.createIchimoku(jsonData.Data)});
       }
-      else if (histoday.Response === "Error") {
+      else if (jsonData.Response === "Error") {
         self.setState({status: "error"});
       }
     });
   }
 
   componentDidMount() {
-    window.scrollBy({top: 999, left: 0, behavior: "smooth"});
-    //this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
-    this.fetchData();  
+    if (this.props.id !== 0) {
+      window.scrollBy({top: 999, left: 0, behavior: "smooth"});
+    }
+    this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
+    //this.fetchData();  
   }
 
   componentDidUpdate(prevProps, prevState) {
     if ((prevState.cx !== this.state.cx) || 
         (prevState.sym !== this.state.sym) || 
         (prevState.price !== this.state.price)) {
-      //console.log(`cx: ${this.state.cx} sym: ${this.state.sym} price: ${this.state.price}`);
-      this.fetchData();
+      console.log(`cx: ${this.state.cx} sym: ${this.state.sym} price: ${this.state.price}`);
+      //this.fetchData();
     }
   }
 
-  handleClick(dropdownName, dropdownItem) {
-    if (this.state[dropdownName] !== dropdownItem) {
+  handleClick(dropdownKey, dropdownItem) {
+    if (this.state[dropdownKey] !== dropdownItem) {
       let newState = {};
-      newState[dropdownName] = dropdownItem;
+      newState[dropdownKey] = dropdownItem;
       newState["status"] = "loading";
       this.setState(newState);
     }
+  }
+
+  handleSubmit(textboxKey, textboxItem, event) {
+    event.preventDefault();
+    let newState = {};
+    newState[textboxKey] = textboxItem;
+    newState["status"] = "loading";
+    this.setState(newState);
   }
   
   createIchimoku(cxData, tenkanParam=10, kijunParam=30) {
@@ -113,10 +153,11 @@ class Ichimoku extends React.Component {
     }
 
 
-    let releventIndices = {"tenkanSen": {"highIndices": [], "lowIndices": []},
-                           "kijunSen": {"highIndices": [], "lowIndices": []},
-                           "senkouSpanB": {"highIndices": [], "lowIndices": []}
-                          };
+    let releventIndices = {
+      "tenkanSen": {"highIndices": [], "lowIndices": []},
+      "kijunSen": {"highIndices": [], "lowIndices": []},
+      "senkouSpanB": {"highIndices": [], "lowIndices": []}
+    };
 
     function slidingWindow(i, k, limits, data) {
       let h = limits.highIndices;
@@ -170,7 +211,7 @@ class Ichimoku extends React.Component {
 
   renderChart() {
     if (this.state.status === "loaded") {
-      let p = this.state.hist[this.state.T].close;
+      let p = this.state.hist[this.state.n].close;
       //console.log("rendering chart...");
       return(
         <ChartCanvas 
@@ -219,7 +260,11 @@ class Ichimoku extends React.Component {
   render() {
     return (
       <div className="chart-area">
-        <SelectionBar curState={this.state} onClick={(key, val) => this.handleClick(key, val)}/>
+        <SelectionBar 
+          curState={this.state} 
+          onClick={(key, val) => this.handleClick(key, val)}
+          onSubmit={(key, val, e) => this.handleSubmit(key, val, e)}
+        />
         {this.renderChart()}
       </div>
     );
@@ -242,7 +287,7 @@ class App extends React.Component {
   render() {
     let charts = [];
     for (let i = 0; i < this.state.numCharts; i++) {
-      charts.push(<Ichimoku key={i}/>);
+      charts.push(<Ichimoku key={i} id={i}/>);
     }
     return (
       <div className="app">
