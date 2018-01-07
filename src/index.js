@@ -40,7 +40,9 @@ class SelectionBar extends React.Component {
     for (let key in dropdownSettings) {
       let items = [];
       for (let i = 0; i < dropdownSettings[key].length; i++) {
-        items.push(<span key={dropdownSettings[key][i]} onClick={() => this.props.onClick(key, dropdownSettings[key][i])}>
+        let pair = {};
+        pair[key] = dropdownSettings[key][i];
+        items.push(<span key={dropdownSettings[key][i]} onClick={() => this.props.onClick(Object.assign(pair, this.state))}>
                      {dropdownSettings[key][i]}
                    </span>);
       }
@@ -59,7 +61,7 @@ class SelectionBar extends React.Component {
     for (let key in this.state) {
       textbox.push(
         <span key={key}>
-          <form onSubmit={(e) => this.props.onSubmit(key, this.state[key], e)}>
+          <form onSubmit={(e) => this.props.onSubmit(this.state, e)}>
             <input type="text" size="10" value={this.state[key]} onChange={(e) => this.handleChange(key, e)}/>
           </form>
         </span>
@@ -81,17 +83,20 @@ class Ichimoku extends React.Component {
     this.state = {
       status: "loading",
       hist: null,
-      T: "histoday",
-      n: 180,
-      cx: "kraken",
-      sym: "BTC",
-      price: "USD"
+      options: {
+        T: "histoday",
+        n: 180,
+        cx: "kraken",
+        sym: "BTC",
+        price: "USD"
+      }
     };
   }
   
   fetchData() {
     const self = this;
-    let url = `https://min-api.cryptocompare.com/data/${this.state.T}?fsym=${this.state.sym}&tsym=${this.state.price}&limit=${this.state.n}&aggregate=1&e=${this.state.cx}`;
+    const opt = this.state.options;
+    let url = `https://min-api.cryptocompare.com/data/${opt.T}?fsym=${opt.sym}&tsym=${opt.price}&limit=${opt.n}&aggregate=1&e=${opt.cx}`;
     fetch(url).then(function(response) {
       return response.json();
     }).then(function(jsonData) {
@@ -108,34 +113,23 @@ class Ichimoku extends React.Component {
     if (this.props.id !== 0) {
       window.scrollBy({top: 999, left: 0, behavior: "smooth"});
     }
-    this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
-    //this.fetchData();  
+    //this.setState({status: "loaded", hist: this.createIchimoku(rawData.Data)});  
+    this.fetchData();
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    if ((prevState.cx !== this.state.cx) || 
-        (prevState.sym !== this.state.sym) || 
-        (prevState.price !== this.state.price)) {
-      console.log(`cx: ${this.state.cx} sym: ${this.state.sym} price: ${this.state.price}`);
-      //this.fetchData();
-    }
-  }
-
-  handleClick(dropdownKey, dropdownItem) {
-    if (this.state[dropdownKey] !== dropdownItem) {
-      let newState = {};
-      newState[dropdownKey] = dropdownItem;
-      newState["status"] = "loading";
-      this.setState(newState);
-    }
-  }
-
-  handleSubmit(textboxKey, textboxItem, event) {
-    event.preventDefault();
-    let newState = {};
-    newState[textboxKey] = textboxItem;
+  handleClick(items) {
+    let newState = {}
+    newState["options"] = Object.assign(this.state.options, items);
     newState["status"] = "loading";
-    this.setState(newState);
+    this.setState(newState, function() {
+      //console.log(`cx: ${this.state.options}`);
+      this.fetchData();
+    });
+  }
+
+  handleSubmit(items, event) {
+    event.preventDefault();
+    this.handleClick(items);
   }
   
   createIchimoku(cxData, tenkanParam=10, kijunParam=30) {
@@ -211,7 +205,7 @@ class Ichimoku extends React.Component {
 
   renderChart() {
     if (this.state.status === "loaded") {
-      let p = this.state.hist[this.state.n].close;
+      let p = this.state.hist[this.state.options.n].close;
       //console.log("rendering chart...");
       return(
         <ChartCanvas 
@@ -239,9 +233,9 @@ class Ichimoku extends React.Component {
             <LineSeries yAccessor={d => d.senkouSpanB} stroke="#1aefe4" highlightOnHover={true} hoverTolerance={10} />
             <LineSeries yAccessor={d => d.chikouSpan} stroke="#dbc300" highlightOnHover={true} hoverTolerance={10} />
             <AreaOnlySeries yAccessor={d => d.senkouSpanA} base={(s,d) => s(d.senkouSpanB)} fill="#7392c4" stroke="#7392c4" opacity={.4} />
-            <PriceCoordinate orient="right" at="right" price={p} displayFormat={format("$.2f")} />
+            <PriceCoordinate orient="right" at="right" price={p} displayFormat={format(".6s")} />
             <MouseCoordinateX displayFormat={format("+")} />
-            <MouseCoordinateY orient="right" at="right" displayFormat={format("$.2f")} />
+            <MouseCoordinateY orient="right" at="right" displayFormat={format(".6s")} />
           </Chart>
           <CrossHairCursor />
         </ChartCanvas>
@@ -261,7 +255,7 @@ class Ichimoku extends React.Component {
     return (
       <div className="chart-area">
         <SelectionBar 
-          curState={this.state} 
+          curState={this.state.options} 
           onClick={(key, val) => this.handleClick(key, val)}
           onSubmit={(key, val, e) => this.handleSubmit(key, val, e)}
         />
