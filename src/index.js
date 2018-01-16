@@ -34,7 +34,7 @@ class SelectionBar extends React.Component {
   render() {
     const dropdownSettings = {
       cx: ["quadrigacx", "kraken", "bittrex"],
-      T: ["histoday", "histohour"]
+      T: ["days", "hours"]
     };
     let dropdown = [];
     for (let key in dropdownSettings) {
@@ -53,8 +53,7 @@ class SelectionBar extends React.Component {
                       <div className="dropdown-items">
                         {items}
                       </div>
-                    </span>
-                   );
+                    </span>);
     }
 
     let textbox = [];
@@ -84,7 +83,7 @@ class Ichimoku extends React.Component {
       status: "loading",
       hist: null,
       options: {
-        T: "histoday",
+        T: "days",
         n: 180,
         cx: "kraken",
         sym: "BTC",
@@ -96,7 +95,7 @@ class Ichimoku extends React.Component {
   fetchData() {
     const self = this;
     const opt = this.state.options;
-    let url = `https://min-api.cryptocompare.com/data/${opt.T}?fsym=${opt.sym}&tsym=${opt.price}&limit=${opt.n}&aggregate=1&e=${opt.cx}`;
+    let url = `https://min-api.cryptocompare.com/data/histo${opt.T.slice(0, opt.T.length-1)}?fsym=${opt.sym}&tsym=${opt.price}&limit=${opt.n}&aggregate=1&e=${opt.cx}`;
     fetch(url).then(function(response) {
       return response.json();
     }).then(function(jsonData) {
