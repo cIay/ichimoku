@@ -13,7 +13,7 @@ import { CrossHairCursor, MouseCoordinateX, MouseCoordinateY, PriceCoordinate } 
 
 import './index.css';
 
-import { rawData } from "./rawdata"
+//import { rawData } from "./rawdata"
 
 class SelectionBar extends React.Component {
   constructor(props) {
@@ -33,8 +33,8 @@ class SelectionBar extends React.Component {
 
   render() {
     const dropdownSettings = {
-      cx: ["quadrigacx", "kraken", "bittrex"],
-      T: ["days", "hours"]
+      cx: ["bitfinex", "bittrex", "coinbase", "kraken", "quadrigacx"],
+      T: ["days", "hours", "minutes"]
     };
     let dropdown = [];
     for (let key in dropdownSettings) {
@@ -85,9 +85,9 @@ class Ichimoku extends React.Component {
       options: {
         T: "days",
         n: 180,
-        cx: "kraken",
+        cx: "quadrigacx",
         sym: "BTC",
-        price: "USD"
+        price: "CAD"
       }
     };
   }
@@ -240,7 +240,7 @@ class Ichimoku extends React.Component {
         </ChartCanvas>
       );
     }
-    else {
+    else if (this.state.status === "loading") {
       //console.log("rendering loader...");
       return(
         <div style={{height: 400}}>
@@ -248,11 +248,33 @@ class Ichimoku extends React.Component {
         </div>
       );
     }
+    else if (this.state.status === "hidden") {
+      return;
+    }
+  }
+
+  renderChartCtrl() {
+    let minmax, newStatus;
+    if (this.state.status !== "hidden") {
+      minmax = "-";
+      newStatus = "hidden";
+    }
+    else {
+      minmax = "+";
+      newStatus = "loaded";
+    }
+    return(
+      <span className="chart-ctrl">
+        <span className="minmax" onClick={() => this.setState({status: newStatus})}>{minmax}</span>
+        <span className="close" onClick={() => this.props.onDel(this.props.id)}>x</span>
+      </span>
+    );
   }
 
   render() {
     return (
       <div className="chart-area">
+        {this.renderChartCtrl()}
         <SelectionBar 
           curState={this.state.options} 
           onClick={(key, val) => this.handleClick(key, val)}
@@ -269,18 +291,38 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      numCharts: 1
+      chartIDs: [0],
+      nextID: 1
     };
   }
 
   handleClick() {
-    this.setState({numCharts: this.state.numCharts+1});
+    let newChartIDs = this.state.chartIDs;
+    newChartIDs.push(this.state.nextID);
+    this.setState({
+      chartIDs: newChartIDs,
+      nextID: this.state.nextID+1
+    });
+  }
+
+  handleDeletion(id) {
+    let newChartIDs = this.state.chartIDs;
+    newChartIDs.splice(newChartIDs.indexOf(id), 1);
+    this.setState({
+      chartIDs: newChartIDs
+    });
   }
 
   render() {
     let charts = [];
-    for (let i = 0; i < this.state.numCharts; i++) {
-      charts.push(<Ichimoku key={i} id={i}/>);
+    for (let i = 0; i < this.state.chartIDs.length; i++) {
+      charts.push(
+        <Ichimoku
+          key={this.state.chartIDs[i]} 
+          id={this.state.chartIDs[i]}
+          onDel={(id) => this.handleDeletion(id)}
+        />
+      );
     }
     return (
       <div className="app">

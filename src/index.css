@@ -87,6 +87,23 @@ body {
 }
 
 
+.chart-ctrl {
+  float: right;
+  margin: 0px 2px 0px 0px;
+}
+
+.chart-ctrl > span {
+  cursor: default;
+  box-shadow: 0px 1px 2px #fff;
+  padding: 2px 8px 2px 8px;
+}
+
+.chart-ctrl > span:hover {
+  box-shadow: 0px 2px 5px #fff;
+}
+
+
+
 .addChart {
   display: block;
   margin: auto;
